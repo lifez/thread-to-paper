@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Thread to Paper",
+  "version": "1.0.0",
+  "description": "Convert X/Twitter threads to printable PDFs.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["preview.html", "preview.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

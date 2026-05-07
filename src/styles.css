@@ -1,0 +1,158 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #000;
+  background: #fff;
+  padding: 12mm;
+  max-width: 210mm;
+  margin: 0 auto;
+}
+
+.toolbar {
+  margin-bottom: 20px;
+  padding: 10px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+button {
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+button:hover {
+  background: #f0f0f0;
+}
+
+.hint {
+  font-size: 12px;
+  color: #666;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+h1 {
+  font-size: 16pt;
+  margin-bottom: 16pt;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: bold;
+}
+
+.author-group {
+  margin-bottom: 10pt;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.author-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6pt;
+}
+
+.group-select {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.name-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.display-name {
+  font-weight: bold;
+  font-size: 10.5pt;
+}
+
+.username {
+  font-size: 9pt;
+  color: #555;
+}
+
+.tweet {
+  margin-bottom: 6pt;
+  text-align: justify;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  orphans: 3;
+  widows: 3;
+}
+
+.tweet-media {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 4px;
+  margin-top: 4pt;
+}
+
+.tweet-media img {
+  width: 100%;
+  height: auto;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+.group-separator {
+  border-top: 1px solid #ccc;
+  margin: 8pt 0;
+}
+
+.author-group.excluded {
+  opacity: 0.3;
+}
+
+.author-group.excluded .tweet-media img {
+  filter: grayscale(1);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    padding: 0;
+    max-width: none;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  .tweet-media img {
+    max-height: 140px;
+  }
+
+  .author-group.excluded {
+    display: none !important;
+  }
+}
