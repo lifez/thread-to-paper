@@ -54,8 +54,6 @@ h1 {
 
 .author-group {
   margin-bottom: 10pt;
-  break-inside: avoid;
-  page-break-inside: avoid;
 }
 
 .author-header {
@@ -134,7 +132,16 @@ h1 {
   filter: grayscale(1);
 }
 
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
 @media print {
+  html, body {
+    overflow: visible !important;
+  }
+
   .no-print {
     display: none !important;
   }
@@ -142,10 +149,6 @@ h1 {
   body {
     padding: 0;
     max-width: none;
-  }
-
-  @page {
-    margin: 12mm;
   }
 
   .tweet-media img {
