@@ -41,14 +41,14 @@ async function render() {
 
   const content = document.getElementById('content') as HTMLDivElement;
   if (!tweets.length) {
-    content.innerHTML = '<p>No thread data found. Go to an X thread and click the extension button.</p>';
+    content.innerHTML = '<p>No tweet data found. Go to an X tweet or thread and click the extension button.</p>';
     return;
   }
 
   const fragment = document.createDocumentFragment();
 
   const header = document.createElement('h1');
-  header.textContent = 'X Thread';
+  header.textContent = 'X Thread / Tweet';
   fragment.appendChild(header);
 
   const groups = groupByAuthor(tweets);

@@ -8,51 +8,53 @@ type ExtractedTweet = {
 };
 
 function getAvatarUrl(el: Element): string | null {
-  const img = el.querySelector('img[src*="profile_images"]') as HTMLImageElement | null;
+  const img = el.querySelector(
+    'img[src*="profile_images"]',
+  ) as HTMLImageElement | null;
   if (img?.src) return img.src;
-  const firstImg = el.querySelector('img') as HTMLImageElement | null;
+  const firstImg = el.querySelector("img") as HTMLImageElement | null;
   return firstImg?.src || null;
 }
 
 function getUsername(el: Element): string {
   const link = el.querySelector('a[href^="/"]') as HTMLAnchorElement | null;
   if (link) {
-    const parts = link.getAttribute('href')?.split('/') || [];
+    const parts = link.getAttribute("href")?.split("/") || [];
     if (parts.length >= 2) {
-      return '@' + parts[1];
+      return "@" + parts[1];
     }
   }
-  return '';
+  return "";
 }
 
 function getDisplayName(el: Element): string {
   const possible = el.querySelectorAll('a[role="link"]');
   for (const a of Array.from(possible)) {
     const text = a.textContent?.trim();
-    if (text && !text.startsWith('@') && text.length > 0 && text.length < 50) {
+    if (text && !text.startsWith("@") && text.length > 0 && text.length < 50) {
       return text;
     }
   }
-  const allText = el.querySelectorAll('span, div');
+  const allText = el.querySelectorAll("span, div");
   for (const t of Array.from(allText)) {
     const text = t.textContent?.trim();
-    if (text && !text.startsWith('@') && text.length > 0 && text.length < 50) {
+    if (text && !text.startsWith("@") && text.length > 0 && text.length < 50) {
       return text;
     }
   }
-  return 'Unknown';
+  return "Unknown";
 }
 
 function getImageUrls(el: Element): string[] {
-  const images = el.querySelectorAll('img');
+  const images = el.querySelectorAll("img");
   const urls: string[] = [];
   const seen = new Set<string>();
 
   images.forEach((img) => {
     const src = img.src;
     if (!src) return;
-    if (src.includes('profile_images')) return;
-    if (src.includes('emoji')) return;
+    if (src.includes("profile_images")) return;
+    if (src.includes("emoji")) return;
     if (seen.has(src)) return;
     seen.add(src);
     urls.push(src);
@@ -62,19 +64,21 @@ function getImageUrls(el: Element): string[] {
 }
 
 const DISCOVERY_MARKERS = [
-  'discover more',
-  'sourced from across',
-  'who to follow',
-  'you might like',
-  'more tweets',
-  'related tweets',
-  'suggested for you',
+  "discover more",
+  "sourced from across",
+  "who to follow",
+  "you might like",
+  "more tweets",
+  "related tweets",
+  "suggested for you",
 ];
 
 function isDiscoverySectionVisible(): boolean {
-  const elements = document.querySelectorAll('div, h2, span, a, button, heading, section, aside, *[role="heading"]');
+  const elements = document.querySelectorAll(
+    'div, h2, span, a, button, heading, section, aside, *[role="heading"]',
+  );
   for (const el of Array.from(elements)) {
-    const text = el.textContent?.toLowerCase().trim() || '';
+    const text = el.textContent?.toLowerCase().trim() || "";
     if (DISCOVERY_MARKERS.some((m) => text.includes(m))) {
       const rect = el.getBoundingClientRect();
       if (rect.top >= -50 && rect.top < window.innerHeight + 50) {
@@ -86,14 +90,16 @@ function isDiscoverySectionVisible(): boolean {
 }
 
 function extractVisibleTweets(): ExtractedTweet[] {
-  const tweetElements = document.querySelectorAll('article[data-testid="tweet"]');
+  const tweetElements = document.querySelectorAll(
+    'article[data-testid="tweet"]',
+  );
   const tweets: ExtractedTweet[] = [];
 
   tweetElements.forEach((el) => {
     const textEl = el.querySelector('[data-testid="tweetText"]');
     if (!textEl) return;
 
-    const text = textEl.textContent?.trim() || '';
+    const text = textEl.textContent?.trim() || "";
     if (!text) return;
 
     tweets.push({
@@ -109,7 +115,7 @@ function extractVisibleTweets(): ExtractedTweet[] {
   return tweets;
 }
 
-async function extractAllTweets(): Promise<ExtractedTweet[]> {
+async function extractAllTweets(maxScrolls: number = 3): Promise<ExtractedTweet[]> {
   const allTweets: ExtractedTweet[] = [];
   const seenKeys = new Set<string>();
 
@@ -121,20 +127,14 @@ async function extractAllTweets(): Promise<ExtractedTweet[]> {
 
   let noNewCount = 0;
   const maxNoNew = 3;
-  const maxScrolls = 3;
   let scrolls = 0;
 
   while (noNewCount < maxNoNew && scrolls < maxScrolls) {
-    // Stop if we reached the "Discover more" / recommendations section
-    if (isDiscoverySectionVisible()) {
-      break;
-    }
-
     const currentTweets = extractVisibleTweets();
     let newFound = 0;
 
     for (const tweet of currentTweets) {
-      const key = tweet.text + '|' + tweet.username;
+      const key = tweet.text + "|" + tweet.username;
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
         allTweets.push(tweet);
@@ -148,6 +148,10 @@ async function extractAllTweets(): Promise<ExtractedTweet[]> {
       noNewCount = 0;
     }
 
+    if (isDiscoverySectionVisible()) {
+      break;
+    }
+
     // Scroll down by ~75% of viewport to load more tweets
     window.scrollBy(0, window.innerHeight * 0.75);
     await new Promise((r) => setTimeout(r, 500));
@@ -156,6 +160,18 @@ async function extractAllTweets(): Promise<ExtractedTweet[]> {
 
   // Restore original scroll position
   window.scrollTo(0, originalScrollTop);
+
+  // Safety net: if we somehow got nothing, try one final extraction at current position
+  if (allTweets.length === 0) {
+    const fallbackTweets = extractVisibleTweets();
+    for (const tweet of fallbackTweets) {
+      const key = tweet.text + "|" + tweet.username;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        allTweets.push({ ...tweet });
+      }
+    }
+  }
 
   // Renumber sequentially
   allTweets.forEach((t, i) => {
@@ -166,8 +182,9 @@ async function extractAllTweets(): Promise<ExtractedTweet[]> {
 }
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  if (request.action === 'EXTRACT_THREAD') {
-    extractAllTweets().then((tweets) => {
+  if (request.action === "EXTRACT_THREAD") {
+    const maxScrolls = request.maxScrolls ?? 3;
+    extractAllTweets(maxScrolls).then((tweets) => {
       sendResponse({ tweets });
     });
     return true; // async response
