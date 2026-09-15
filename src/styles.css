@@ -1,161 +1,120 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+:root {
+  color-scheme: light;
+  --ink: #1b1b18;
+  --muted: #6f6a5f;
+  --paper: #fffdf8;
+  --canvas: #efebe2;
+  --line: #d6d0c3;
+  --accent: #255b43;
+  --danger: #a13b2d;
 }
 
+* { box-sizing: border-box; }
+
 body {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 10.5pt;
-  line-height: 1.45;
-  color: #000;
-  background: #fff;
-  padding: 12mm;
-  max-width: 210mm;
-  margin: 0 auto;
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font: 16px/1.7 Georgia, "Times New Roman", serif;
 }
 
 .toolbar {
-  margin-bottom: 20px;
-  padding: 10px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  position: sticky;
+  z-index: 10;
+  top: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 76px;
+  padding: 14px clamp(20px, 4vw, 52px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(239, 235, 226, .94);
+  backdrop-filter: blur(14px);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
+.eyebrow, .connection { margin: 0; }
+.eyebrow { font-size: 11px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+.connection { color: var(--muted); font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
 button {
-  padding: 8px 16px;
-  font-size: 14px;
+  border: 1px solid var(--ink);
+  border-radius: 7px;
+  padding: 9px 13px;
+  background: var(--ink);
+  color: white;
   cursor: pointer;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
+  font: 650 13px/1.2 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-button:hover {
-  background: #f0f0f0;
+button:hover { background: #3b3933; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+button.secondary { border-color: #bdb6a8; background: transparent; color: var(--ink); }
+button.secondary:hover { background: rgba(255,255,255,.55); }
+
+main { width: min(860px, calc(100% - 40px)); margin: 48px auto 100px; }
+.summary { margin: 0 0 26px; }
+.kind {
+  display: inline-block;
+  margin: 0 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: var(--muted);
+  font: 700 10px/1.4 ui-sans-serif, sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
 }
 
-.hint {
-  font-size: 12px;
-  color: #666;
-  font-family: system-ui, -apple-system, sans-serif;
-}
+h1 { max-width: 760px; margin: 0; font-size: clamp(34px, 6vw, 64px); font-weight: 500; line-height: 1.04; letter-spacing: -.035em; }
+.byline { margin: 17px 0 0; color: var(--muted); font-family: ui-sans-serif, sans-serif; font-size: 14px; }
+.filename { margin: 6px 0 0; color: #8b8579; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
 
-h1 {
-  font-size: 16pt;
-  margin-bottom: 16pt;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-weight: bold;
-}
+.warnings { margin-bottom: 18px; border: 1px solid #d4b28c; border-radius: 8px; padding: 14px 17px; background: #fff4df; font-family: ui-sans-serif, sans-serif; }
+.warnings h2, .warnings p { margin: 0; }
+.warnings h2 { font-size: 13px; }
+.warnings p { margin-top: 5px; color: #755327; font-size: 13px; }
 
-.author-group {
-  margin-bottom: 10pt;
-}
+.paper { border: 1px solid var(--line); padding: clamp(28px, 7vw, 72px); background: var(--paper); box-shadow: 0 18px 55px rgba(46, 42, 32, .08); }
+.paper p { margin: 0 0 1.25em; white-space: pre-wrap; }
+.paper h2 { margin: 2.1em 0 .65em; font: 650 18px/1.35 ui-sans-serif, sans-serif; }
+.paper h2:first-child { margin-top: 0; }
+.paper .question { border-top: 1px solid var(--line); padding-top: 1.5em; }
+.tweet + .tweet { margin-top: 42px; border-top: 1px solid var(--line); padding-top: 34px; }
+.tweet h2 { margin: 0 0 12px; }
 
-.author-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6pt;
-}
+.image-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 0 0 34px; }
+figure { margin: 0; }
+figure img { display: block; width: 100%; max-height: 440px; border-radius: 4px; object-fit: cover; background: #e6e1d7; }
+figcaption { margin-top: 7px; color: var(--muted); font: 12px/1.4 ui-sans-serif, sans-serif; }
 
-.group-select {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  flex-shrink: 0;
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  max-width: min(440px, calc(100% - 44px));
+  border-radius: 8px;
+  padding: 12px 15px;
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 12px 40px rgba(0,0,0,.18);
+  font: 13px/1.45 ui-sans-serif, sans-serif;
 }
+.toast[data-state="error"] { background: var(--danger); }
+.toast[data-state="working"] { background: #665f50; }
 
-.avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.name-block {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.display-name {
-  font-weight: bold;
-  font-size: 10.5pt;
-}
-
-.username {
-  font-size: 9pt;
-  color: #555;
-}
-
-.tweet {
-  margin-bottom: 6pt;
-  text-align: justify;
-  break-inside: avoid;
-  page-break-inside: avoid;
-  orphans: 3;
-  widows: 3;
-}
-
-.tweet-media {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 4px;
-  margin-top: 4pt;
-}
-
-.tweet-media img {
-  width: 100%;
-  height: auto;
-  max-height: 160px;
-  object-fit: cover;
-  border-radius: 4px;
-  display: block;
-}
-
-.group-separator {
-  border-top: 1px solid #ccc;
-  margin: 8pt 0;
-}
-
-.author-group.excluded {
-  opacity: 0.3;
-}
-
-.author-group.excluded .tweet-media img {
-  filter: grayscale(1);
-}
-
-@page {
-  size: A4;
-  margin: 12mm;
+@media (max-width: 760px) {
+  .toolbar { position: static; align-items: flex-start; flex-direction: column; }
+  .actions { justify-content: flex-start; }
+  main { margin-top: 30px; }
 }
 
 @media print {
-  html, body {
-    overflow: visible !important;
-  }
-
-  .no-print {
-    display: none !important;
-  }
-
-  body {
-    padding: 0;
-    max-width: none;
-  }
-
-  .tweet-media img {
-    max-height: 140px;
-  }
-
-  .author-group.excluded {
-    display: none !important;
-  }
+  body { background: white; }
+  .toolbar, .toast, .warnings { display: none !important; }
+  main { width: auto; margin: 0; }
+  .summary { margin-bottom: 20px; }
+  .paper { border: 0; padding: 0; box-shadow: none; }
 }

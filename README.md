@@ -1,70 +1,65 @@
-# Thread to Paper
+# X Archive Capture
 
-A Chrome extension that converts X (formerly Twitter) threads into a compact, printable PDF view so you can read them on paper.
+An Edge/Chrome extension that saves X posts, threads, and long-form articles as readable Markdown in a local archive. It is adapted from [lifez/thread-to-paper](https://github.com/lifez/thread-to-paper) and remains under the MIT license.
 
-## Features
+## What it does
 
-- Extract visible tweets from an X thread page
-- Open a clean, compact preview formatted for A4 paper
-- Print or save as PDF using your browser's print dialog
-- No editing, no accounts, no servers — everything stays local
+- Detects X long-form articles separately from ordinary posts and threads.
+- Preserves article paragraphs and Q&A structure.
+- Captures title, author, handle, source URL, publication date, capture date, and available image descriptions.
+- Produces filenames in `YYYY-MM-DD-handle-short-title.md` format.
+- Connects to a local archive folder through Chromium's directory picker.
+- Checks `index.md` and the target file for duplicate source URLs.
+- Writes the Markdown file to `articles/` and appends its row to `index.md`.
+- Shows capture warnings instead of silently presenting incomplete content as complete.
+- Offers a normal Markdown download when direct folder access is not desired.
 
-## Install (Developer Mode)
-
-1. Build the extension:
-   ```bash
-   npm install
-   npm run build
-   ```
-2. Open Chrome and go to `chrome://extensions/`.
-3. Enable **Developer mode** (toggle in the top right).
-4. Click **Load unpacked**.
-5. Select the `dist/` folder inside this project.
-
-## Usage
-
-1. Open an X thread in your browser.
-2. If the thread is long, scroll down to load all tweets you want to capture.
-3. Click the **Thread to Paper** extension icon.
-4. Click **Create PDF View**.
-5. A new tab opens with the compact preview.
-6. Click **Print / Save as PDF** and use your browser print dialog to save.
-
-## Notes
-
-- Only tweets already loaded in the page DOM are captured. Scroll to load more before extracting.
-- Duplicate tweets are automatically removed.
-- The layout is optimized for compact printing (small font, narrow margins, minimal spacing).
-
-## Project Structure
-
-```
-thread-to-paper/
-├── public/
-│   └── manifest.json          # Chrome Extension Manifest V3
-├── src/
-│   ├── popup.html / popup.ts  # Extension popup UI
-│   ├── content-script.ts      # Extracts tweets from X pages
-│   ├── preview.html / preview.ts  # Printable preview page
-│   └── styles.css             # Compact print layout
-├── dist/                      # Build output (load this in Chrome)
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
+Everything stays local. The extension does not post, like, reply, follow, transmit captured text, or use a server.
 
 ## Build
 
 ```bash
+npm ci
 npm run build
+npx tsc --noEmit
 ```
 
-To watch for changes during development:
+The loadable extension is produced in `dist/`.
 
-```bash
-npm run dev
+## Install in Microsoft Edge
+
+1. Open `edge://extensions/`.
+2. Enable **Developer mode**.
+3. Choose **Load unpacked**.
+4. Select this project's `dist/` folder.
+
+## First use
+
+1. Open an X post, thread, or article.
+2. Click **X Archive Capture** and then **Capture current page**.
+3. In the preview, choose **Connect archive folder**.
+4. Select the folder that contains `index.md` and `articles/`.
+5. Choose **Save to archive**.
+
+The browser may ask you to renew folder permission after a restart. The extension never stores credentials or browser session data.
+
+## Capture behavior
+
+For long-form articles, the extension reads X's rendered article blocks directly. For threads, it scrolls through the conversation and de-duplicates loaded posts. The maximum automatic scroll count can be changed in the extension popup.
+
+X can change its page structure without notice. If required article elements are unavailable, the generated Markdown includes a `PARTIAL CAPTURE` warning for review.
+
+## Project structure
+
+```text
+src/content-script.ts  X article/post/thread extraction
+src/markdown.ts        Filename, Markdown, and index-row generation
+src/archive.ts         Folder permission, duplicate checks, and local writes
+src/popup.*            Capture launcher
+src/preview.*          Review and save interface
+public/manifest.json   Manifest V3 configuration
 ```
 
 ## License
 
-MIT
+MIT. The original copyright notice is preserved in `LICENSE`.

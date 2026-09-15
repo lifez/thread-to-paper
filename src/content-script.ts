@@ -1,67 +1,4 @@
-type ExtractedTweet = {
-  index: number;
-  text: string;
-  displayName: string;
-  username: string;
-  avatarUrl: string | null;
-  imageUrls: string[];
-};
-
-function getAvatarUrl(el: Element): string | null {
-  const img = el.querySelector(
-    'img[src*="profile_images"]',
-  ) as HTMLImageElement | null;
-  if (img?.src) return img.src;
-  const firstImg = el.querySelector("img") as HTMLImageElement | null;
-  return firstImg?.src || null;
-}
-
-function getUsername(el: Element): string {
-  const link = el.querySelector('a[href^="/"]') as HTMLAnchorElement | null;
-  if (link) {
-    const parts = link.getAttribute("href")?.split("/") || [];
-    if (parts.length >= 2) {
-      return "@" + parts[1];
-    }
-  }
-  return "";
-}
-
-function getDisplayName(el: Element): string {
-  const possible = el.querySelectorAll('a[role="link"]');
-  for (const a of Array.from(possible)) {
-    const text = a.textContent?.trim();
-    if (text && !text.startsWith("@") && text.length > 0 && text.length < 50) {
-      return text;
-    }
-  }
-  const allText = el.querySelectorAll("span, div");
-  for (const t of Array.from(allText)) {
-    const text = t.textContent?.trim();
-    if (text && !text.startsWith("@") && text.length > 0 && text.length < 50) {
-      return text;
-    }
-  }
-  return "Unknown";
-}
-
-function getImageUrls(el: Element): string[] {
-  const images = el.querySelectorAll("img");
-  const urls: string[] = [];
-  const seen = new Set<string>();
-
-  images.forEach((img) => {
-    const src = img.src;
-    if (!src) return;
-    if (src.includes("profile_images")) return;
-    if (src.includes("emoji")) return;
-    if (seen.has(src)) return;
-    seen.add(src);
-    urls.push(src);
-  });
-
-  return urls;
-}
+import type { CapturedImage, CapturedPage, CapturedTweet } from "./types";
 
 const DISCOVERY_MARKERS = [
   "discover more",
@@ -73,121 +10,231 @@ const DISCOVERY_MARKERS = [
   "suggested for you",
 ];
 
-function isDiscoverySectionVisible(): boolean {
-  const elements = document.querySelectorAll(
-    'div, h2, span, a, button, heading, section, aside, *[role="heading"]',
-  );
-  for (const el of Array.from(elements)) {
-    const text = el.textContent?.toLowerCase().trim() || "";
-    if (DISCOVERY_MARKERS.some((m) => text.includes(m))) {
-      const rect = el.getBoundingClientRect();
-      if (rect.top >= -50 && rect.top < window.innerHeight + 50) {
-        return true;
-      }
-    }
-  }
-  return false;
+function localDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function extractVisibleTweets(): ExtractedTweet[] {
-  const tweetElements = document.querySelectorAll(
-    'article[data-testid="tweet"]',
+function cleanUrl(value: string): string {
+  const url = new URL(value, location.href);
+  url.search = "";
+  url.hash = "";
+  return url.href;
+}
+
+function meaningfulDescription(value: string | null | undefined): string | null {
+  const cleaned = value?.trim();
+  if (!cleaned || /^(image|photo)$/i.test(cleaned)) return null;
+  return cleaned;
+}
+
+function backgroundImageUrl(element: Element): string | null {
+  const styled = [element, ...Array.from(element.querySelectorAll<HTMLElement>("[style]"))];
+  for (const item of styled) {
+    const style = item instanceof HTMLElement ? item.style.backgroundImage : "";
+    const match = style.match(/url\(["']?(.*?)["']?\)/);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+function imagesFrom(root: Element): CapturedImage[] {
+  const images: CapturedImage[] = [];
+  const seen = new Set<string>();
+  const mediaRoots = root.querySelectorAll<HTMLElement>(
+    '[data-testid="tweetPhoto"], [data-testid="videoPlayer"]',
   );
-  const tweets: ExtractedTweet[] = [];
 
-  tweetElements.forEach((el) => {
-    const textEl = el.querySelector('[data-testid="tweetText"]');
-    if (!textEl) return;
+  for (const media of Array.from(mediaRoots)) {
+    const img = media.querySelector<HTMLImageElement>("img");
+    const url = img?.currentSrc || img?.src || backgroundImageUrl(media);
+    if (!url || seen.has(url) || url.includes("profile_images") || url.includes("emoji")) continue;
+    seen.add(url);
+    images.push({
+      url,
+      description:
+        meaningfulDescription(img?.alt) ?? meaningfulDescription(media.getAttribute("aria-label")),
+    });
+  }
 
-    const text = textEl.textContent?.trim() || "";
+  return images;
+}
+
+function usernameFrom(root: Element): string {
+  const text = Array.from(root.querySelectorAll("span, a"))
+    .map((element) => element.textContent?.trim() ?? "")
+    .find((value) => /^@[A-Za-z0-9_]{1,15}$/.test(value));
+  return text ?? "";
+}
+
+function displayNameFrom(root: Element, username: string): string {
+  const profile = username.replace(/^@/, "").toLowerCase();
+  const links = Array.from(root.querySelectorAll<HTMLAnchorElement>("a[href]"));
+  const match = links.find((link) => {
+    const text = link.textContent?.trim() ?? "";
+    const path = new URL(link.href, location.href).pathname.replace(/^\//, "").toLowerCase();
+    return path === profile && text && !text.startsWith("@") && text.length < 80;
+  });
+  return match?.textContent?.trim() || username || "Unavailable";
+}
+
+function publishedAtFrom(root: Element): string | null {
+  return root.querySelector<HTMLTimeElement>("time[datetime]")?.dateTime || null;
+}
+
+function originalPostUrlFrom(root: Element): string | null {
+  const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href*="/status/"]'));
+  const match = links.map((link) => cleanUrl(link.href)).find((url) => /\/status\/\d+/.test(url));
+  return match?.replace(/\/(analytics|photo\/\d+|video\/\d+)$/, "") ?? null;
+}
+
+function articleSourceUrl(root: Element): string {
+  const link = Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href*="/article/"]'))
+    .map((element) => cleanUrl(element.href))
+    .find((url) => /\/article\/\d+/.test(url));
+  return link?.replace(/\/media\/\d+$/, "") ?? cleanUrl(location.href);
+}
+
+function extractArticle(): CapturedPage | null {
+  const root = document.querySelector<HTMLElement>('[data-testid="twitterArticleReadView"]');
+  if (!root) return null;
+
+  const title = root.querySelector<HTMLElement>('[data-testid="twitter-article-title"]')
+    ?.innerText.trim();
+  const username = usernameFrom(root);
+  const richText = root.querySelector<HTMLElement>('[data-testid="longformRichTextComponent"]');
+  const blocks = richText
+    ? Array.from(richText.querySelectorAll<HTMLElement>('[data-block="true"]'))
+        .map((block) => block.innerText.trim())
+        .filter(Boolean)
+    : [];
+  const paragraphs = blocks.length
+    ? blocks
+    : (richText?.innerText ?? "").split(/\n{2,}/).map((text) => text.trim()).filter(Boolean);
+  const warnings: string[] = [];
+
+  if (!title) warnings.push("The article title was unavailable.");
+  if (!username) warnings.push("The author handle was unavailable.");
+  if (!richText || paragraphs.length === 0) {
+    warnings.push("PARTIAL CAPTURE: X did not expose the long-form article body in the page.");
+  }
+
+  return {
+    kind: "article",
+    title: title || "Untitled X article",
+    displayName: displayNameFrom(root, username),
+    username: username || "@unknown",
+    sourceUrl: articleSourceUrl(root),
+    originalPostUrl: originalPostUrlFrom(root),
+    publishedAt: publishedAtFrom(root),
+    capturedOn: localDate(),
+    paragraphs,
+    tweets: [],
+    images: imagesFrom(root),
+    warnings,
+  };
+}
+
+function isDiscoverySectionVisible(): boolean {
+  const elements = document.querySelectorAll(
+    'h2, section, aside, [role="heading"], [data-testid="sidebarColumn"]',
+  );
+  return Array.from(elements).some((element) => {
+    const text = element.textContent?.toLowerCase().trim() || "";
+    if (!DISCOVERY_MARKERS.some((marker) => text.includes(marker))) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.top >= -50 && rect.top < window.innerHeight + 50;
+  });
+}
+
+function extractVisibleTweets(): CapturedTweet[] {
+  const tweetElements = document.querySelectorAll<HTMLElement>('article[data-testid="tweet"]');
+  const tweets: CapturedTweet[] = [];
+
+  tweetElements.forEach((element) => {
+    const text = element.querySelector<HTMLElement>('[data-testid="tweetText"]')?.innerText.trim();
     if (!text) return;
-
+    const username = usernameFrom(element);
     tweets.push({
-      index: 0, // renumbered later
+      index: 0,
       text,
-      displayName: getDisplayName(el),
-      username: getUsername(el),
-      avatarUrl: getAvatarUrl(el),
-      imageUrls: getImageUrls(el),
+      displayName: displayNameFrom(element, username),
+      username: username || "@unknown",
+      publishedAt: publishedAtFrom(element),
+      images: imagesFrom(element),
     });
   });
 
   return tweets;
 }
 
-async function extractAllTweets(maxScrolls: number = 3): Promise<ExtractedTweet[]> {
-  const allTweets: ExtractedTweet[] = [];
-  const seenKeys = new Set<string>();
-
+async function extractThread(maxScrolls: number): Promise<CapturedPage> {
+  const allTweets: CapturedTweet[] = [];
+  const seen = new Set<string>();
   const originalScrollTop = window.scrollY;
-
-  // Start at the top so we can scroll through everything
-  window.scrollTo(0, 0);
-  await new Promise((r) => setTimeout(r, 500));
-
   let noNewCount = 0;
-  const maxNoNew = 3;
   let scrolls = 0;
 
-  while (noNewCount < maxNoNew && scrolls < maxScrolls) {
-    const currentTweets = extractVisibleTweets();
-    let newFound = 0;
+  window.scrollTo(0, 0);
+  await new Promise((resolve) => setTimeout(resolve, 450));
 
-    for (const tweet of currentTweets) {
-      const key = tweet.text + "|" + tweet.username;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        allTweets.push(tweet);
-        newFound++;
-      }
+  while (noNewCount < 3 && scrolls < maxScrolls) {
+    const current = extractVisibleTweets();
+    let added = 0;
+    for (const tweet of current) {
+      const key = `${tweet.username}|${tweet.publishedAt ?? ""}|${tweet.text}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      allTweets.push(tweet);
+      added += 1;
     }
-
-    if (newFound === 0) {
-      noNewCount++;
-    } else {
-      noNewCount = 0;
-    }
-
-    if (isDiscoverySectionVisible()) {
-      break;
-    }
-
-    // Scroll down by ~75% of viewport to load more tweets
+    noNewCount = added === 0 ? noNewCount + 1 : 0;
+    if (isDiscoverySectionVisible()) break;
     window.scrollBy(0, window.innerHeight * 0.75);
-    await new Promise((r) => setTimeout(r, 500));
-    scrolls++;
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    scrolls += 1;
   }
 
-  // Restore original scroll position
   window.scrollTo(0, originalScrollTop);
+  allTweets.forEach((tweet, index) => { tweet.index = index + 1; });
 
-  // Safety net: if we somehow got nothing, try one final extraction at current position
-  if (allTweets.length === 0) {
-    const fallbackTweets = extractVisibleTweets();
-    for (const tweet of fallbackTweets) {
-      const key = tweet.text + "|" + tweet.username;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        allTweets.push({ ...tweet });
-      }
-    }
+  const first = allTweets[0];
+  const titleText = first?.text.replace(/\s+/g, " ").trim() || "X post";
+  const warnings: string[] = [];
+  if (!allTweets.length) warnings.push("PARTIAL CAPTURE: No post text was available in the page.");
+  if (scrolls >= maxScrolls) {
+    warnings.push(`The capture stopped after the configured ${maxScrolls} scrolls; verify very long threads.`);
   }
 
-  // Renumber sequentially
-  allTweets.forEach((t, i) => {
-    t.index = i + 1;
-  });
-
-  return allTweets;
+  return {
+    kind: allTweets.length > 1 ? "thread" : "post",
+    title: titleText.length > 100 ? `${titleText.slice(0, 97).trim()}…` : titleText,
+    displayName: first?.displayName ?? "Unavailable",
+    username: first?.username ?? "@unknown",
+    sourceUrl: cleanUrl(location.href),
+    originalPostUrl: null,
+    publishedAt: first?.publishedAt ?? null,
+    capturedOn: localDate(),
+    paragraphs: [],
+    tweets: allTweets,
+    images: [],
+    warnings,
+  };
 }
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  if (request.action === "EXTRACT_THREAD") {
-    const maxScrolls = request.maxScrolls ?? 3;
-    extractAllTweets(maxScrolls).then((tweets) => {
-      sendResponse({ tweets });
+  if (request.action !== "EXTRACT_PAGE") return false;
+  const article = extractArticle();
+  const result = article
+    ? Promise.resolve(article)
+    : extractThread(Math.max(1, Math.min(Number(request.maxScrolls) || 12, 100)));
+  result
+    .then((capture) => sendResponse({ capture }))
+    .catch((error: unknown) => {
+      sendResponse({ error: error instanceof Error ? error.message : String(error) });
     });
-    return true; // async response
-  }
-  return false;
+  return true;
 });
