@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Thread to Paper",
-  "version": "1.0.0",
-  "description": "Convert X/Twitter threads to printable PDFs.",
+  "name": "X Archive Capture",
+  "version": "2.0.0",
+  "description": "Save X posts, threads, and long-form articles to a local Markdown archive.",
   "permissions": ["activeTab", "storage", "scripting"],
   "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
   "action": {
@@ -14,10 +14,5 @@
       "js": ["content.js"]
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": ["preview.html", "preview.css"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "web_accessible_resources": []
 }

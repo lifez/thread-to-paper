@@ -6,6 +6,7 @@ export default defineConfig({
   publicDir: '../public',
   base: './',
   build: {
+    modulePreload: false,
     outDir: '../dist',
     emptyOutDir: true,
     rollupOptions: {

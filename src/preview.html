@@ -1,18 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Thread Preview</title>
+  <title>X Archive Capture</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="no-print toolbar">
-    <button id="selectAllBtn">Select All</button>
-    <button id="deselectAllBtn">Deselect All</button>
-    <button id="printBtn">Print / Save as PDF</button>
-  </div>
-  <div id="content"></div>
+  <header class="toolbar">
+    <div>
+      <p class="eyebrow">X Archive Capture</p>
+      <p id="connectionLabel" class="connection">No archive folder connected</p>
+    </div>
+    <div class="actions">
+      <button id="connectBtn" class="secondary">Connect archive folder</button>
+      <button id="downloadBtn" class="secondary">Download Markdown</button>
+      <button id="saveBtn">Save to archive</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="captureSummary" class="summary" aria-labelledby="title"></section>
+    <section id="warnings" class="warnings" hidden></section>
+    <article id="content" class="paper"></article>
+  </main>
+
+  <div id="status" class="toast" role="status" aria-live="polite" hidden></div>
   <script type="module" src="./preview.ts"></script>
 </body>
 </html>

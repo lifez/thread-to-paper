@@ -1,48 +1,50 @@
-const extractBtn = document.getElementById('extractBtn') as HTMLButtonElement;
-const statusDiv = document.getElementById('status') as HTMLDivElement;
-const maxScrollsInput = document.getElementById('maxScrolls') as HTMLInputElement;
+import type { CapturedPage } from "./types";
 
-function getMaxScrolls(): number {
-  const val = parseInt(maxScrollsInput.value, 10);
-  return isNaN(val) || val < 1 ? 3 : val;
-}
+const extractButton = document.getElementById("extractBtn") as HTMLButtonElement;
+const status = document.getElementById("status") as HTMLDivElement;
+const maxScrollsInput = document.getElementById("maxScrolls") as HTMLInputElement;
 
-async function extractThread(tabId: number, maxScrolls: number): Promise<{ tweets: any[] } | null> {
+async function requestCapture(
+  tabId: number,
+  maxScrolls: number,
+): Promise<{ capture?: CapturedPage; error?: string }> {
   try {
-    const response = await chrome.tabs.sendMessage(tabId, { action: 'EXTRACT_THREAD', maxScrolls });
-    return response;
+    return await chrome.tabs.sendMessage(tabId, { action: "EXTRACT_PAGE", maxScrolls });
   } catch {
-    // Content script not loaded; inject it and retry once
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['content.js'],
-    });
-    // Wait briefly to ensure the script is ready
-    await new Promise((r) => setTimeout(r, 200));
-    return await chrome.tabs.sendMessage(tabId, { action: 'EXTRACT_THREAD', maxScrolls });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    return await chrome.tabs.sendMessage(tabId, { action: "EXTRACT_PAGE", maxScrolls });
   }
 }
 
-extractBtn.addEventListener('click', async () => {
-  statusDiv.textContent = 'Extracting thread (scrolling to load all tweets)...';
+extractButton.addEventListener("click", async () => {
+  extractButton.disabled = true;
+  status.dataset.state = "working";
+  status.textContent = "Reading the current X page…";
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) {
-    statusDiv.textContent = 'Error: Cannot access current tab.';
+  if (
+    !tab?.id ||
+    !tab.url?.match(/^https:\/\/(x|twitter)\.com\/[^/]+\/(status|article)\/\d+/)
+  ) {
+    status.dataset.state = "error";
+    status.textContent = "Open one specific X post, thread, or article first—not a profile or feed.";
+    extractButton.disabled = false;
     return;
   }
 
   try {
-    const maxScrolls = getMaxScrolls();
-    const response = await extractThread(tab.id, maxScrolls);
-    if (response?.tweets?.length) {
-      await chrome.storage.session.set({ threadData: response.tweets });
-      await chrome.tabs.create({ url: chrome.runtime.getURL('preview.html') });
-      statusDiv.textContent = 'Opening preview...';
-    } else {
-      statusDiv.textContent = 'No tweets found. Make sure a tweet or thread is open and fully loaded.';
+    const maxScrolls = Math.max(1, Math.min(Number(maxScrollsInput.value) || 12, 100));
+    const response = await requestCapture(tab.id, maxScrolls);
+    if (!response.capture || response.error) {
+      throw new Error(response.error || "No readable X content was found.");
     }
-  } catch (err) {
-    statusDiv.textContent = 'Error: ' + (err as Error).message;
+    await chrome.storage.session.set({ captureData: response.capture });
+    await chrome.tabs.create({ url: chrome.runtime.getURL("preview.html") });
+    status.dataset.state = "success";
+    status.textContent = "Opening archive preview…";
+  } catch (error) {
+    status.dataset.state = "error";
+    status.textContent = error instanceof Error ? error.message : String(error);
+    extractButton.disabled = false;
   }
 });

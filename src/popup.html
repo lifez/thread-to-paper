@@ -1,69 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Thread to Paper</title>
+  <title>X Archive Capture</title>
   <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
     body {
-      width: 300px;
-      padding: 16px;
+      width: 340px;
       margin: 0;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 14px;
-      color: #333;
+      padding: 20px;
+      background: #f5f2ea;
+      color: #1b1b18;
+      font: 14px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    h1 {
-      font-size: 16px;
-      margin: 0 0 12px;
+    .eyebrow {
+      margin: 0 0 6px;
+      color: #756f63;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
     }
+    h1 { margin: 0; font: 600 24px/1.1 Georgia, serif; }
+    .intro { margin: 9px 0 18px; color: #5d594f; }
     button {
       width: 100%;
-      padding: 10px;
-      font-size: 14px;
+      border: 0;
+      border-radius: 8px;
+      padding: 11px 14px;
+      background: #1b1b18;
+      color: #fff;
       cursor: pointer;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background: #fff;
+      font: inherit;
+      font-weight: 650;
     }
-    button:hover {
-      background: #f5f5f5;
-    }
-    #status {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #555;
-      min-height: 1.2em;
-    }
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 12px;
-      font-size: 12px;
-    }
-    .row input {
-      width: 52px;
+    button:hover { background: #3a3933; }
+    button:disabled { cursor: wait; opacity: .55; }
+    details { margin-top: 14px; color: #756f63; font-size: 12px; }
+    summary { cursor: pointer; }
+    label { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+    input {
+      width: 58px;
+      border: 1px solid #cec8bb;
+      border-radius: 5px;
       padding: 4px 6px;
-      font-size: 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      background: #fff;
+      color: inherit;
     }
-    .row .hint {
-      color: #999;
-      font-size: 11px;
-    }
+    #status { min-height: 18px; margin-top: 12px; font-size: 12px; color: #5d594f; }
+    #status[data-state="error"] { color: #a13b2d; }
+    #status[data-state="success"] { color: #276345; }
   </style>
 </head>
 <body>
-  <h1>Thread to Paper</h1>
-  <div class="row">
-    <label for="maxScrolls">Max scrolls:</label>
-    <input type="number" id="maxScrolls" value="3" min="1" max="999" />
-    <span class="hint">(higher for long threads)</span>
-  </div>
-  <button id="extractBtn">Create PDF View</button>
-  <div id="status"></div>
+  <p class="eyebrow">Local reading archive</p>
+  <h1>X Archive Capture</h1>
+  <p class="intro">Capture the open post, thread, or long-form article as clean Markdown.</p>
+  <button id="extractBtn">Capture current page</button>
+  <details>
+    <summary>Long-thread settings</summary>
+    <label for="maxScrolls">
+      Maximum automatic scrolls
+      <input type="number" id="maxScrolls" value="12" min="1" max="100" />
+    </label>
+  </details>
+  <div id="status" role="status" aria-live="polite"></div>
   <script type="module" src="./popup.ts"></script>
 </body>
 </html>
